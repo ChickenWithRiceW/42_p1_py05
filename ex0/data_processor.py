@@ -95,6 +95,7 @@ class TextProcessor(DataProcessor):
 
 
 # ! How tf should I parse this in a good way
+# ! Only procceses Logs in the format of {"log_level: ", "log_message: "}
 class LogProcessor(DataProcessor):
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
@@ -112,6 +113,14 @@ class LogProcessor(DataProcessor):
     def _is_valid_log(data: Any) -> bool:
         if not isinstance(data, dict):
             return False
+
+        if len(data.keys()) != 2:
+            return False
+
+        key0, key1 = data.keys()
+        if key0 != "log_level" or key1 != "log_message":
+            return False
+
         return all(isinstance(k, str) and
                    isinstance(v, str) for k, v in data.items())
 
