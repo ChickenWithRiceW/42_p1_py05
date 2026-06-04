@@ -30,14 +30,18 @@ class DataProcessor(ABC):
     def validate(self, data: Any) -> bool:
         pass
 
+    @abstractmethod
     def ingest(self, data: Any) -> None:
         pass
 
     def output(self) -> tuple[int, str]:
-        # ? What happens if empty?
-        cpy = self._data_rank
+        if not self._data:
+            raise Exception("No data available")
+        return self._data.pop(0)
+
+    def _store(self, value: str) -> None:
+        self._data.append((self._data_rank, value))
         self._data_rank += 1
-        return (cpy, self._data.pop(0))
 
 
 class NumericProcessor(DataProcessor):
@@ -45,8 +49,14 @@ class NumericProcessor(DataProcessor):
     def ingest(self, data: int | float | list[int | float]) -> None:
         if not self.validate(data):
             raise Exception("Improper numeric data")
-        else:
-            self._data.append(str(data))
+
+        if isinstance(data, (int, float)):
+            self._store(str(data))
+            return
+
+        if isinstance(data, list):
+            for x in data:
+                self._store(str(x))
 
     # Validates the input
     def validate(self, data: Any) -> bool:
@@ -66,10 +76,11 @@ class TextProcessor(DataProcessor):
         if not self.validate(data):
             raise Exception("Improper text data")
         if isinstance(data, str):
-            self._data.append(str(data))
+            self._store(data)
             return
         if isinstance(data, list):
-            
+            for s in data:
+                self._store(s)
 
     # Validates the input
     def validate(self, data: Any) -> bool:
@@ -83,12 +94,19 @@ class TextProcessor(DataProcessor):
         return False
 
 
+# ! How tf should I parse this in a good way
 class LogProcessor(DataProcessor):
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
             raise Exception("Improper log data")
-        else:
-            self._data.append(str(data))
+
+        if isinstance(data, dict):
+            self._store(f"{data['log_level']}: {data['log_message']}")
+
+        if isinstance(data, list):
+            for d in data:
+                for k, v in d.items():
+                    self._store(f"{k}: {v}")
 
     @staticmethod
     def _is_valid_log(data: Any) -> bool:
