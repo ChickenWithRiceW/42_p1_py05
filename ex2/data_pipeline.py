@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Protocol
 from abc import ABC, abstractmethod
 
 """
@@ -144,6 +144,15 @@ class LogProcessor(DataProcessor):
         return False
 
 
+class ExportPlugin(Protocol):
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        pass
+
+class CsvPlugin():
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+
+
+
 class DataStream:
     def __init__(self) -> None:
         self._procs: list[DataProcessor] = []
@@ -172,6 +181,11 @@ class DataStream:
             class_name = proc.__class__.__name__
             print(f"{class_name[:-9]} Processor: total {proc._data_rank} "
                   f"items processed, remaining {len(proc._data)} on processor")
+
+    def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
+        plugin.process_output(nb)
+
+
 
 
 def main() -> None:

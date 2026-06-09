@@ -71,10 +71,10 @@ class NumericProcessor(DataProcessor):
         if isinstance(data, (int, float)):
             return True
 
-        # Checks if everything in the list is eather a int or float
+        # Checks if everything in the list is either a int or float
         if isinstance(data, list):
             return all(isinstance(x, (int, float))
-                       and not isinstance(x, bool)for x in data)
+                       and not isinstance(x, bool) for x in data)
 
         return False
 
@@ -105,7 +105,7 @@ class TextProcessor(DataProcessor):
         return False
 
 
-# ! Only procceses Logs in the format of {"log_level: ", "log_message: "}
+# ! Only processes Logs in the format of {"log_level: ", "log_message: "}
 class LogProcessor(DataProcessor):
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
@@ -124,20 +124,16 @@ class LogProcessor(DataProcessor):
         if not isinstance(data, dict):
             return False
 
-        # When there arent exactly two keys inside the dict quit
-        if len(data.keys()) != 2:
-            return False
-
         # If the keys don't match the format quit
         keys = set(data.keys())
         if keys != {"log_level", "log_message"}:
             return False
 
-        # Verfiy that the keys and vales in dict are only strings
+        # Verify that the keys and vales in dict are only strings
         return all(isinstance(k, str) and
                    isinstance(v, str) for k, v in data.items())
 
-    # Checks if everything in the list is eather a int or float
+    # Checks if everything in the list is either a int or float
     def validate(self, data: Any) -> bool:
         if self._is_valid_log(data):
             return True
