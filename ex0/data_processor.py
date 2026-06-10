@@ -21,6 +21,11 @@ Note that this works with functions inside the all() as well
 
 # This is a abstract class. You cannot create a instance of it
 class DataProcessor(ABC):
+
+    # Defining return value if no data is available to return
+    # A sentinel is a special value used as a signal, like '-1'
+    EMPTY_SENTINEL: tuple[int, str] = (-1, "No data available")
+
     def __init__(self) -> None:
         self._data: list[tuple[int, str]] = []
         self._data_rank = 0
@@ -38,7 +43,7 @@ class DataProcessor(ABC):
     # Outputs the stored data using a list containing tuples
     def output(self) -> tuple[int, str]:
         if not self._data:
-            raise Exception("No data available")
+            return self.EMPTY_SENTINEL
         return self._data.pop(0)
 
     # Helper function to store the data with its rank
