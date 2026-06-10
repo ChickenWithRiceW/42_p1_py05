@@ -19,6 +19,28 @@ Note that this works with functions inside the all() as well
 """
 
 
+class ExportPlugin(Protocol):
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        pass
+
+
+# Do not parse input in this plugin without checking the proper output
+class CSVPlugin:
+    @staticmethod
+    def process_output(data: list[tuple[int, str]]) -> None:
+        print("CSV Output:")
+        print(*(item[1] for item in data), sep=',')
+
+
+class JsonPlugin:
+    @staticmethod
+    def process_output(data: list[tuple[int, str]]) -> None:
+        print("JSON Output:")
+        final_format = ", ".join(f'"item_{item[0]}": "{item[1]}"'
+                                 for item in data)
+        print("{" + final_format + "}")
+
+
 # This is a abstract class. You cannot create a instance of it
 class DataProcessor(ABC):
 
@@ -149,15 +171,6 @@ class LogProcessor(DataProcessor):
         return False
 
 
-class ExportPlugin(Protocol):
-    def process_output(self, data: list[tuple[int, str]]) -> None:
-        pass
-
-class CsvPlugin():
-    def process_output(self, data: list[tuple[int, str]]) -> None:
-
-
-
 class DataStream:
     def __init__(self) -> None:
         self._procs: list[DataProcessor] = []
@@ -188,13 +201,20 @@ class DataStream:
                   f"items processed, remaining {len(proc._data)} on processor")
 
     def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
-        plugin.process_output(nb)
-
-
+        for proc in self._procs:
+            output = []
+            for _ in range(nb):
+                item = proc.output()
+                # Guards against processing empty output
+                if item != DataProcessor.EMPTY_SENTINEL:
+                    output.append(item)
+                else:
+                    break
+            plugin.process_output(output)
 
 
 def main() -> None:
-    print("=== Code Nexus - Data Stream ===\n")
+    print("=== Code Nexus - Data Pipeline ===\n")
 
     print("Initialize Data Stream...")
     data_stream = DataStream()
@@ -202,9 +222,13 @@ def main() -> None:
     print("== DataStream statistics ==\n")
     data_stream.print_processors_stats()
 
-    print("\nRegistering Numeric Processor\n")
+    print("\nRegistering Processors\n")
     num_proc = NumericProcessor()
+    text_proc = TextProcessor()
+    log_proc = LogProcessor()
     data_stream.register_processor(num_proc)
+    data_stream.register_processor(text_proc)
+    data_stream.register_processor(log_proc)
 
     test_batch = ['Hello world', [3.14, -1, 2.71],
                   [{'log_level': 'WARNING',
@@ -216,31 +240,36 @@ def main() -> None:
     print(f"Send first batch of data on stream: {test_batch}")
     data_stream.process_stream(test_batch)
 
-    print("== DataStream statistics ==")
+    print("== DataStream statistics ==\n")
     data_stream.print_processors_stats()
 
-    print("\nRegistering other data processors")
-    text_proc = TextProcessor()
-    log_proc = LogProcessor()
-    data_stream.register_processor(text_proc)
-    data_stream.register_processor(log_proc)
+    print("\nSend 3 processed data from each processor to a CSV plugin:")
+    data_stream.output_pipeline(3, CSVPlugin)
 
-    print("Send the same batch again")
+    print("\n== DataStream statistics ==")
+    data_stream.print_processors_stats()
+
+    test_batch = [
+            21,
+            ['I love AI', 'LLMs are wonderful', 'Stay healthy'],
+            [
+                {'log_level': 'ERROR', 'log_message': '500 server crash'},
+                {'log_level': 'NOTICE',
+                 'log_message': 'Certificate expires in 10 days'}
+            ],
+            [32, 42, 64, 84, 128, 168], 'World hello'
+            ]
+
+    print(f"\nSend another batch of data: {test_batch}")
     data_stream.process_stream(test_batch)
 
-    print("== DataStream statistics ==")
+    print("\n== DataStream statistics ==")
     data_stream.print_processors_stats()
 
-    print("\nConsume some elements from the data processors: "
-          "Numeric 3, Text 2, Log 1")
+    print("\nSend 5 processed data from each processor to a JSON plugin:")
+    data_stream.output_pipeline(5, JsonPlugin)
 
-    for _ in range(3):
-        num_proc.output()
-    for _ in range(2):
-        text_proc.output()
-        log_proc.output()
-
-    print("== DataStream statistics ==")
+    print("\n== DataStream statistics ==")
     data_stream.print_processors_stats()
 
 
